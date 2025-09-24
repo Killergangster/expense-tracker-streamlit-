@@ -25,13 +25,12 @@ def check_hashes(password, hashed_text):
         return hashed_text
     return False
 
-# --- NEW FUNCTION TO CHECK FOR EXISTING USERS ---
+# --- USER AUTHENTICATION & HELPERS ---
 def check_user_exists(username):
     with engine.connect() as conn:
         result = conn.execute(db.text("SELECT username FROM users WHERE username = :user"), {"user": username})
         return result.scalar() is not None
 
-# --- USER AUTHENTICATION ---
 def add_userdata(username, password):
     with engine.connect() as conn:
         hashed_password = make_hashes(password)
@@ -47,7 +46,7 @@ def login_user(username, password):
             return check_hashes(password, hashed_pass)
     return False
 
-# --- EXPENSE MANAGEMENT (No changes in this section) ---
+# --- EXPENSE MANAGEMENT ---
 def add_expense(username, date, category, amount, description):
     with engine.connect() as conn:
         conn.execute(db.text("INSERT INTO expenses(username, expense_date, category, amount, description) VALUES(:user, :date, :cat, :amt, :desc)"),
@@ -56,10 +55,11 @@ def add_expense(username, date, category, amount, description):
 
 def view_all_expenses(username, is_admin=False):
     with engine.connect() as conn:
+        # If is_admin is True, it fetches all records.
         if is_admin:
             query = "SELECT id, username, expense_date, category, amount, description FROM expenses"
             df = pd.read_sql(query, conn)
-        else:
+        else: # Otherwise, it only fetches records for the logged-in user.
             query = "SELECT id, expense_date, category, amount, description FROM expenses WHERE username = :user"
             df = pd.read_sql(query, conn, params={"user": username})
     return df
@@ -80,7 +80,7 @@ def delete_data(expense_id):
         conn.execute(db.text("DELETE FROM expenses WHERE id=:id"), {"id": expense_id})
         conn.commit()
 
-# --- DATA VISUALIZATION & EXPORT (No changes in these sections) ---
+# --- DATA VISUALIZATION & EXPORT ---
 def plot_expenses_by_category(df):
     if df.empty: return None
     category_summary = df.groupby('category')['amount'].sum()
@@ -146,7 +146,6 @@ def main():
         st.session_state['username'] = ''
         st.session_state['is_admin'] = False
 
-    # --- UPDATED LOGIN/SIGNUP SECTION ---
     if not st.session_state['logged_in']:
         choice = st.selectbox("Login or Sign Up", ["Login", "Sign Up"])
 
@@ -158,7 +157,8 @@ def main():
                 if login_user(username, password):
                     st.session_state['logged_in'] = True
                     st.session_state['username'] = username
-                    st.session_state['is_admin'] = (username == 'admin')
+                    # Set admin status based on the new admin username
+                    st.session_state['is_admin'] = (username == 'Itachibanker19')
                     st.success(f"Welcome {username}")
                     st.rerun()
                 else:
@@ -181,7 +181,7 @@ def main():
                 else:
                     st.warning("Passwords do not match.")
     else:
-        # --- LOGGED-IN USER INTERFACE (No changes here) ---
+        # Logged-in user interface
         st.sidebar.subheader(f"Welcome {st.session_state['username']}")
         menu = ["Add Expense", "Summary", "Manage Records"]
         choice = st.sidebar.selectbox("Menu", menu)
@@ -209,29 +209,42 @@ def main():
             st.subheader("Expense Summary")
             df = view_all_expenses(st.session_state['username'], st.session_state['is_admin'])
             if not df.empty:
-                st.dataframe(df); col1, col2 = st.columns(2)
-                with col1: st.pyplot(plot_expenses_by_category(df))
-                with col2: st.pyplot(plot_bar_chart_by_category(df))
+                st.dataframe(df) 
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("Expenses by Category")
+                    st.pyplot(plot_expenses_by_category(df))
+                with col2:
+                    st.subheader("Spending per Category")
+                    st.pyplot(plot_bar_chart_by_category(df))
+
+                st.subheader("Monthly Spending Trend")
                 st.pyplot(plot_expenses_over_time(df))
-            else: st.info("No expenses recorded yet.")
+            else:
+                st.info("No expenses recorded yet.")
 
         elif choice == "Manage Records":
             st.subheader("Manage Your Expenses")
             df = view_all_expenses(st.session_state['username'], st.session_state['is_admin'])
             if not df.empty:
                 st.dataframe(df)
+
+                st.markdown("### Export Data")
                 excel_data = export_to_excel(df)
                 st.download_button(label="📥 Export to Excel", data=excel_data, file_name=f"expenses.xlsx")
                 pdf_data = export_to_pdf(df, st.session_state['username'], st.session_state['is_admin'])
                 st.download_button(label="📄 Export to PDF", data=pdf_data, file_name=f"report.pdf")
-                
+
+                st.markdown("### Delete Records")
                 expense_ids = df['id'].tolist()
-                selected_id = st.selectbox("Select Expense ID to Manage", expense_ids)
+                selected_id = st.selectbox("Select Expense ID to Delete", expense_ids)
                 if selected_id:
                     if st.button("Delete", key=f"delete_{selected_id}"):
                         delete_data(selected_id)
                         st.success(f"Deleted record ID: {selected_id}")
                         st.rerun()
+            else:
+                st.info("No expenses recorded to manage.")
 
 if __name__ == '__main__':
     main()

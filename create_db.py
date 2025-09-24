@@ -32,10 +32,14 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 # Add default users (admin and demo)
 try:
+    # --- MODIFIED ADMIN CREDENTIALS ---
     c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-              ('admin', make_hashes('admin123')))
+              ('Itachibanker19', make_hashes('Killer1980')))
+    
+    # --- DEMO USER REMAINS THE SAME ---
     c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
               ('demo', make_hashes('demo123')))
+
 except sqlite3.IntegrityError:
     # This will happen if users already exist, which is fine.
     print("Default users already exist.")
@@ -44,4 +48,4 @@ except sqlite3.IntegrityError:
 conn.commit()
 conn.close()
 
-print("✅ expenses.db created with admin & demo accounts!")
+print("✅ expenses.db created with new admin & demo accounts!")

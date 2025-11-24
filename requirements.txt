@@ -1,6 +1,6 @@
 streamlit
 pandas
-matplotlib
 sqlalchemy
+matplotlib
 reportlab
 openpyxl

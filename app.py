@@ -225,8 +225,8 @@ def generate_smart_insights(username):
 
 # --- STREAMLIT APP ---
 def main():
-    st.set_page_config(page_title="Expense calculater", page_icon="🚀")
-    st.title("🚀 Expense calculater")
+    st.set_page_config(page_title="Expense Tracker", page_icon="🚀")
+    st.title("🚀 Expense Tracker")
 
     if not os.path.exists(DB_FILE):
         subprocess.run(['python', 'create_db.py'], check=True)
